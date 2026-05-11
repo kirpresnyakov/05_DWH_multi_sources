@@ -96,7 +96,7 @@ class CouriersLoader:
 
             # Сохраняем прогресс.
             wf_setting.workflow_settings[self.LAST_LOADED_ID_KEY] = max([t.id for t in load_queue])
-            wf_setting_json = json2str(wf_setting.workflow_settings)  # Преобразую к строке, чтобы положить в БД.
+            wf_setting_json = json2str(wf_setting.workflow_settings)  # преобразуем в строку, чтобы сохранить в БД.
             self.settings_repository.save_setting(conn, wf_setting.workflow_key, wf_setting_json)
             self.log.info(f'wf_setting_json = {wf_setting_json}')
 
