@@ -37,12 +37,12 @@ def from_dds_to_cdm_dag ():
     @task(task_id="settlement_load_task")
     def load_settlement_task():
         rest_loader = SettlementLoader(dwh_pg_connect, dwh_pg_connect, log)
-        rest_loader.load_data()  # Вызываю функцию, которая перельет данные.
+        rest_loader.load_data()  
 
     @task(task_id="courier_ledger_load_task")
     def load_courier_ledger_task():
         rest_loader = CourierLedgerLoader(dwh_pg_connect, dwh_pg_connect, log)
-        rest_loader.load_data()  # Вызываю функцию, которая перельет данные.
+        rest_loader.load_data()  
 
     load_task = load_settlement_task()
     load_courier_ledger = load_courier_ledger_task()
