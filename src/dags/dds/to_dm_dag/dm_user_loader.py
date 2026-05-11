@@ -14,15 +14,12 @@ class UsersLoader:
     LAST_LOADED_ID_KEY = "last_loaded_id"
     LAST_LOADED_TS_KEY = "last_loaded_ts"
 
+    
+   # Инициализация загрузчика пользователей из STG в DDS
     def __init__(self, pg_connect: PgConnect, logger: Optional[logging.Logger] = None) -> None:
-        """
-        Инициализация загрузчика пользователей из STG в DDS
-        
-        :param pg_connect: объект PgConnect для подключения к базе данных
-        :param logger: логгер для записи логов
-        """
-        self.pg_connect = pg_connect
-        self.log = logger or logging.getLogger(__name__)
+      
+        self.pg_connect = pg_connect # PgConnect для подключения к базе данных
+        self.log = logger or logging.getLogger(__name__) # логгер для записи логов
 
     def str2json(self, json_str: str) -> Dict:
         """
@@ -33,11 +30,10 @@ class UsersLoader:
         except json.JSONDecodeError as e:
             self.log.error(f"Ошибка декодирования JSON: {e}")
             return {}
-
+            
+    # Получение настроек workflow из таблицы dds.srv_wf_settings
     def _get_wf_setting(self, cursor) -> Dict:
-        """
-        Получение настроек workflow из таблицы dds.srv_wf_settings
-        """
+   
         query = """
             SELECT workflow_key, workflow_settings
             FROM dds.srv_wf_settings
@@ -69,17 +65,15 @@ class UsersLoader:
         except Exception as e:
             self.log.error(f"Ошибка при получении настроек workflow: {e}")
             raise
-
+            
+    # Сохранение настроек workflow в таблицу dds.srv_wf_settings
     def _save_wf_setting(self, cursor, last_loaded_id: int, last_loaded_ts: datetime) -> None:
-        """
-        Сохранение настроек workflow в таблицу dds.srv_wf_settings
-        """
+        
         workflow_settings = {
             self.LAST_LOADED_ID_KEY: last_loaded_id,
             self.LAST_LOADED_TS_KEY: last_loaded_ts.isoformat() if isinstance(last_loaded_ts, datetime) else last_loaded_ts
         }
         
-        # Убрали updated_at из запроса
         query = """
             INSERT INTO dds.srv_wf_settings (workflow_key, workflow_settings)
             VALUES (%s, %s)
@@ -93,11 +87,10 @@ class UsersLoader:
         except Exception as e:
             self.log.error(f"Ошибка при сохранении настроек workflow: {e}")
             raise
-
+            
+   #  Извлечение данных из STG слоя с учетом последней загрузки
     def extract_from_stg(self, cursor, last_loaded_ts: datetime, limit: int = None) -> List[Dict]:
-        """
-        Извлечение данных из STG слоя с учетом последней загрузки
-        """
+     
         query = """
             SELECT id, object_id, object_value, update_ts
             FROM stg.ordersystem_users
@@ -131,11 +124,10 @@ class UsersLoader:
         except Exception as e:
             self.log.error(f"Ошибка при извлечении данных из STG: {e}")
             return []
-
+            
+    # Преобразование данных из STG формата в DDS формат
     def transform_data(self, stg_data: List[Dict]) -> List[Dict]:
-        """
-        Преобразование данных из STG формата в DDS формат
-        """
+     
         transformed_data = []
         
         for item in stg_data:
@@ -164,17 +156,15 @@ class UsersLoader:
         
         self.log.info(f"Преобразовано {len(transformed_data)} записей")
         return transformed_data
-
+        
+    # Загрузка данных в DDS слой (без ON CONFLICT - используем MERGE через INSERT/UPDATE)
     def load_to_dds(self, cursor, transformed_data: List[Dict]) -> None:
-        """
-        Загрузка данных в DDS слой (без ON CONFLICT - используем MERGE через INSERT/UPDATE)
-        """
+       
         if not transformed_data:
             self.log.warning("Нет данных для загрузки")
             return
         
-        # Используем подход с проверкой существования записи
-        # Это безопаснее, чем ON CONFLICT, если нет ограничения UNIQUE
+        # Используем подход с проверкой существования записи. Это безопаснее, чем ON CONFLICT, если нет ограничения UNIQUE
         upsert_query = """
             WITH new_data AS (
                 SELECT %s AS user_id, %s AS user_name, %s AS user_login
@@ -203,7 +193,7 @@ class UsersLoader:
                 user_name = item['user_name']
                 user_login = item['user_login']
                 
-                # Сначала пытаемся вставить новую запись
+                # Вставляем новую запись
                 cursor.execute(upsert_query, (user_id, user_name, user_login, user_id))
                 if cursor.rowcount > 0:
                     inserted_count += 1
@@ -218,12 +208,9 @@ class UsersLoader:
         except Exception as e:
             self.log.error(f"Ошибка при загрузке данных в DDS: {e}")
             raise
-
+    # Основной метод выполнения загрузки с отслеживанием прогресса. Возвращает количество обработанных записей
     def run_copy(self, cursor) -> int:
-        """
-        Основной метод выполнения загрузки с отслеживанием прогресса
-        Возвращает количество обработанных записей
-        """
+     
         self.log.info("=" * 60)
         self.log.info("Начало загрузки данных пользователей из STG в DDS")
         self.log.info("=" * 60)
@@ -268,11 +255,10 @@ class UsersLoader:
         except Exception as e:
             self.log.error(f"Ошибка при выполнении загрузки: {e}")
             raise
-
+            
+    # Основной метод загрузки данных с использованием контекстного менеджера
     def execute_loading(self) -> None:
-        """
-        Основной метод загрузки данных с использованием контекстного менеджера
-        """
+  
         try:
             self.log.info("Начало загрузки пользователей в DDS")
             
