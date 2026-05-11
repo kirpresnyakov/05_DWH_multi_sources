@@ -2,8 +2,6 @@ import logging
 
 import pendulum
 from airflow.decorators import dag, task
-
-# Импортируем наши классы:
 from dds.to_dm_dag.dm_user_loader import UsersLoader
 from dds.to_dm_dag.dm_restaurant_loader import RestaurantsLoader
 from dds.to_dm_dag.timestamp_loader import TimestampsLoader
@@ -27,17 +25,16 @@ log = logging.getLogger(__name__)
     tags=['sprint5', 'dds', 'users', 'stg_to_dds'],  # Теги для фильтрации
     is_paused_upon_creation=True  # Остановлен при создании
 )
+
+# DAG для загрузки данных пользователей из STG слоя в DDS слой. 
+# Извлекает данные из stg.ordersystem_users и загружает в dds.dm_users
 def transfer_to_dds_dag():
-    """
-    DAG для загрузки данных пользователей из STG слоя в DDS слой.
-    Извлекает данные из stg.ordersystem_users и загружает в dds.dm_users
-    """
     
     # Создаем подключение к DWH
     dwh_pg_connect = ConnectionBuilder.pg_conn("PG_WAREHOUSE_CONNECTION")
 
-    # Объявляем таск, который загружает данные пользователей
-    @task(task_id="users_load")
+    
+    @task(task_id="users_load") # Таск, для загрузки данных пользователей
     def load_users():
         """
         Таск для загрузки данных пользователей из STG в DDS
@@ -57,12 +54,9 @@ def transfer_to_dds_dag():
             log.error(f"Ошибка при загрузке данных пользователей: {e}")
             raise
     
-    # Объявляем таск, который загружает данные ресторанов
-    @task(task_id="restaurants_load")
+    
+    @task(task_id="restaurants_load") # Таск, для загрузки данных ресторанов из STG в DDS
     def load_restaurants():
-        """
-        Таск для загрузки данных ресторанов из STG в DDS
-        """
         log.info("Начало загрузки данных ресторанов из STG в DDS")
         
         try:
@@ -78,15 +72,12 @@ def transfer_to_dds_dag():
             log.error(f"Ошибка при загрузке данных ресторанов: {e}")
             raise
 
-    @task(task_id="timestamps_load")
+    @task(task_id="timestamps_load") #Таск для загрузки временных меток
     def load_timestamps_task():
-        """
-        Таск для загрузки временных меток
-        """
         log.info("Начало загрузки временных меток в DDS")
         
         try:
-        # Создаем экземпляр класса TimestampsLoader с ПРАВИЛЬНЫМИ параметрами
+        # Создаем экземпляр класса TimestampsLoader
             timestamp_loader = TimestampsLoader(
                 pg_origin=dwh_pg_connect,  # Для чтения из STG
                 pg_dest=dwh_pg_connect,    # Для записи в DDS (можно тот же коннект)
@@ -94,7 +85,7 @@ def transfer_to_dds_dag():
             )
         
             # Выполнение загрузки
-            timestamp_loader.load_data()  # Или load_timestamps() - смотрите имя метода
+            timestamp_loader.load_data()
             
             log.info("Загрузка временных меток успешно завершена")
             
@@ -102,19 +93,15 @@ def transfer_to_dds_dag():
             log.error(f"Ошибка при загрузке временных меток: {e}")
             raise
     
-    @task(task_id="load_orders")
+    @task(task_id="load_orders") # Загрузка заказов из STG в DDS
     def load_orders():
-        """Загрузка заказов из STG в DDS"""
         log.info("Начало загрузки заказов")
         
         try:
             # Создаем подключения к источнику и целевому хранилищу
-            # Для вашего класса нужны два подключения: pg_origin и pg_dest
-            # В примере предполагается, что оба используют одно подключение к DWH
             dwh_connection = ConnectionBuilder.pg_conn("PG_WAREHOUSE_CONNECTION")
             
             # Создаем подключения для источника и приемника
-            # В вашем случае они могут быть одинаковыми или разными
             pg_origin = dwh_connection
             pg_dest = dwh_connection
             
@@ -134,9 +121,9 @@ def transfer_to_dds_dag():
             log.error(f"Ошибка при загрузке заказов: {e}")
             log.exception(e)
             raise
-    @task(task_id ="load_product")
+            
+    @task(task_id ="load_product") # Загрузка продуктов из STG в DDS
     def load_products():
-        """Загрузка продуктов из STG в DDS"""
         log.info("Начало загрузки продуктов")
         
         try:
@@ -162,19 +149,15 @@ def transfer_to_dds_dag():
             log.exception(e)
             raise
 
-    @task(task_id="load_product_sales")
+    @task(task_id="load_product_sales") # Загрузка фактов продаж продуктов из STG в DDS
     def load_product_sales():
-        """Загрузка фактов продаж продуктов из STG в DDS"""
         log.info("Начало загрузки фактов продаж продуктов")
         
         try:
             # Создаем подключение к DWH
-            # В ProductSalesLoader нужны два подключения: pg_origin и pg_dest
-            # Обычно они используют одно и то же подключение к хранилищу данных
             dwh_connection = ConnectionBuilder.pg_conn("PG_WAREHOUSE_CONNECTION")
             
             # Создаем подключения для источника (STG) и приемника (DDS)
-            # В большинстве случаев они будут одинаковыми
             pg_origin = dwh_connection
             pg_dest = dwh_connection
             
@@ -196,37 +179,26 @@ def transfer_to_dds_dag():
             log.exception(e)
             raise
     
-    @task(task_id="couriers_load_task")
+    @task(task_id="couriers_load_task") #  Загрузка курьеров из STG в DDS
     def load_couriers_task():
-        """
-        Загрузка курьеров из STG в DDS
-        """
         log.info("Начало загрузки курьеров")
         couriers_loader = CouriersLoader(dwh_pg_connect, dwh_pg_connect, log)
         couriers_loader.load_data()
         log.info("Загрузка курьеров завершена")
 
-    @task(task_id="deliveries_load_task")
-    def load_deliveries_task():
-        """
-        Загрузка доставок из STG в DDS
-        """
+    @task(task_id="deliveries_load_task") # Загрузка доставок из STG в DDS
+    def load_deliveries_task(): 
         log.info("Начало загрузки доставок")
         deliveries_loader = DeliveriesLoader(dwh_pg_connect, dwh_pg_connect, log)
         deliveries_loader.load_data()
         log.info("Загрузка доставок завершена")
 
-    @task(task_id="couriers_deliveries_load_task")
+    @task(task_id="couriers_deliveries_load_task") # Загрузка связей курьеров и доставок из STG в DDS
     def load_courier_deliveries_task():
-        """
-        Загрузка связей курьеров и доставок из STG в DDS
-        """
         log.info("Начало загрузки связей курьеров и доставок")
         courier_deliveries_loader = CourierDeliveriesLoader(dwh_pg_connect, dwh_pg_connect, log)
         courier_deliveries_loader.load_data()
         log.info("Загрузка связей курьеров и доставок завершена")
-
-
 
     # Инициализируем таски
     users_task = load_users()
