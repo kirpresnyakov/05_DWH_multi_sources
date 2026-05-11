@@ -117,6 +117,7 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при извлечении данных из STG: {e}")
             return []
+            
     # Преобразование данных из STG формата в DDS формат
     def transform_data(self, stg_data: List[Dict]) -> List[Dict]:
         transformed_data = [] # Извлекаем информацию о ресторане из поля restaurant в JSON
