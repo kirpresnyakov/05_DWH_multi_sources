@@ -13,16 +13,11 @@ class RestaurantsLoader:
     WF_KEY = "stg_to_dds_restaurants_workflow"
     LAST_LOADED_ID_KEY = "last_loaded_id"
     LAST_LOADED_TS_KEY = "last_loaded_ts"
-
+    
+    # Инициализация загрузчика ресторанов из STG в DDS
     def __init__(self, pg_connect: PgConnect, logger: Optional[logging.Logger] = None) -> None:
-        """
-        Инициализация загрузчика ресторанов из STG в DDS
-        
-        :param pg_connect: объект PgConnect для подключения к базе данных
-        :param logger: логгер для записи логов
-        """
-        self.pg_connect = pg_connect
-        self.log = logger or logging.getLogger(__name__)
+        self.pg_connect = pg_connect #объект PgConnect для подключения к базе данных
+        self.log = logger or logging.getLogger(__name__) # логгер для записи логов
         
     # Преобразование строки JSON в словарь Python
     def str2json(self, json_str: str) -> Dict: 
@@ -161,6 +156,7 @@ class RestaurantsLoader:
         
         self.log.info(f"Преобразовано {len(transformed_data)} записей")
         return transformed_data
+        
     # Загрузка данных в DDS слой для таблицы dm_restaurants
     def load_to_dds(self, cursor, transformed_data: List[Dict]) -> None:
         """
