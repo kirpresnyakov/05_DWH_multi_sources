@@ -1,4 +1,5 @@
 Описание реализации проекта
+<img width="1482" height="595" alt="изображение" src="https://github.com/user-attachments/assets/65979239-9086-4ce5-9679-af3681f8bdba" />
 
 Задачи:  
 • Добавить новый источник данных в DWH. (API курьерской службы).  
