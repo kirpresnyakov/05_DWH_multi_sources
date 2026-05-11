@@ -68,9 +68,10 @@ class StgRepository:
 class DdsRepository:
     def __init__(self, pg: PgConnect) -> None:
         self._db = pg
-
+        
+    # Получаем последний загруженный ID из таблицы настроек
     def get_last_loaded_id(self) -> int:
-        with self._db.client() as conn: # Получаем последний загруженный ID из таблицы настроек
+        with self._db.client() as conn: 
             with conn.cursor() as cur:
                 cur.execute(
                     """
