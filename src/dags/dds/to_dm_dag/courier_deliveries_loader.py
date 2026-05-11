@@ -24,7 +24,7 @@ class StgRepository:
         self._db = pg
 
     def list_objects(self, last_loaded: int, batch_limit: int) -> List[CourierDeliveryObj]:
-        """Получаем данные из STG с JOIN к DDS таблицам для получения ключей"""
+        # Получаем данные из STG с JOIN к DDS таблицам для получения ключей
         with self._db.client() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
                 cur.execute(
@@ -70,8 +70,7 @@ class DdsRepository:
         self._db = pg
 
     def get_last_loaded_id(self) -> int:
-        """Получаем последний загруженный ID из таблицы настроек"""
-        with self._db.client() as conn:
+        with self._db.client() as conn: # Получаем последний загруженный ID из таблицы настроек
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -84,12 +83,11 @@ class DdsRepository:
                 if result and result[0]:
                     return int(result[0])
                 return -1
-
+                
+    # Сохраняем доставку в фактовую таблицу
     def save_courier_delivery(self, delivery_obj: CourierDeliveryObj) -> None:
-        """Сохраняем доставку в фактовую таблицу"""
-        with self._db.client() as conn:
-            with conn.cursor() as cur:
-                # Сначала получаем delivery_id из dds.dm_deliveries
+        with self._db.client() as conn: # Сначала получаем delivery_id из dds.dm_deliveries
+            with conn.cursor() as cur: 
                 cur.execute(
                     """
                     SELECT id FROM dds.dm_deliveries 
@@ -136,9 +134,9 @@ class DdsRepository:
                     }
                 )
                 conn.commit()
-
+                
+    # Обновляем последний загруженный ID
     def update_last_loaded(self, last_id: int) -> None:
-        """Обновляем последний загруженный ID"""
         with self._db.client() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -187,8 +185,8 @@ class CourierDeliveriesLoader:
             processed_count = 0
             skipped_count = 0
             
+            # Пропускаем записи без курьера в DDS
             for delivery_obj in load_queue:
-                # Пропускаем записи без курьера в DDS
                 if not delivery_obj.dds_courier_id:
                     self.log.warning(f"Skipping delivery_id={delivery_obj.delivery_id}, no courier in DDS")
                     skipped_count += 1
