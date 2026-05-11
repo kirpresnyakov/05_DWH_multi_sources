@@ -23,21 +23,17 @@ class RestaurantsLoader:
         """
         self.pg_connect = pg_connect
         self.log = logger or logging.getLogger(__name__)
-
-    def str2json(self, json_str: str) -> Dict:
-        """
-        Преобразование строки JSON в словарь Python
-        """
+        
+    # Преобразование строки JSON в словарь Python
+    def str2json(self, json_str: str) -> Dict: 
         try:
             return json.loads(json_str)
         except json.JSONDecodeError as e:
             self.log.error(f"Ошибка декодирования JSON: {e}")
             return {}
-
-    def _get_wf_setting(self, cursor) -> Dict:
-        """
-        Получение настроек workflow из таблицы dds.srv_wf_settings
-        """
+            
+   # Получение настроек workflow из таблицы dds.srv_wf_settings
+    def _get_wf_setting(self, cursor) -> Dict: 
         query = """
             SELECT workflow_key, workflow_settings
             FROM dds.srv_wf_settings
@@ -69,11 +65,9 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при получении настроек workflow: {e}")
             raise
-
+            
+    # Сохранение настроек workflow в таблицу dds.srv_wf_settings
     def _save_wf_setting(self, cursor, last_loaded_id: int, last_loaded_ts: datetime) -> None:
-        """
-        Сохранение настроек workflow в таблицу dds.srv_wf_settings
-        """
         workflow_settings = {
             self.LAST_LOADED_ID_KEY: last_loaded_id,
             self.LAST_LOADED_TS_KEY: last_loaded_ts.isoformat() if isinstance(last_loaded_ts, datetime) else last_loaded_ts
@@ -92,11 +86,9 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при сохранении настроек workflow: {e}")
             raise
-
+            
+    # Извлечение данных из STG слоя с учетом последней загрузки
     def extract_from_stg(self, cursor, last_loaded_ts: datetime, limit: int = None) -> List[Dict]:
-        """
-        Извлечение данных из STG слоя с учетом последней загрузки
-        """
         query = """
             SELECT id, object_id, object_value, update_ts
             FROM stg.ordersystem_restaurants
@@ -130,21 +122,15 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при извлечении данных из STG: {e}")
             return []
-
+    # Преобразование данных из STG формата в DDS формат
     def transform_data(self, stg_data: List[Dict]) -> List[Dict]:
-        """
-        Преобразование данных из STG формата в DDS формат
-        
-        Извлекаем информацию о ресторане из поля 'restaurant' в JSON
-        """
-        transformed_data = []
+        transformed_data = [] # Извлекаем информацию о ресторане из поля restaurant в JSON
         
         for item in stg_data:
             json_data = item['json_data']
             
             try:
-                # Извлекаем данные о ресторане из поля 'restaurant'
-                restaurant_info = json_data.get('restaurant')
+                restaurant_info = json_data.get('restaurant') # Извлекаем данные о ресторане из поля restaurant
                 if not restaurant_info:
                     self.log.warning(f"Пропущено: нет данных о ресторане для id {item['id']}")
                     continue
@@ -155,9 +141,8 @@ class RestaurantsLoader:
                 if not restaurant_id:
                     self.log.warning(f"Пропущено: нет restaurant_id для id {item['id']}")
                     continue
-                
-                # Если имя не указано, используем ID как имя
-                if not restaurant_name:
+                    
+                if not restaurant_name:  # Если имя не указано, используем ID как имя
                     restaurant_name = f"Ресторан {restaurant_id}"
                     self.log.warning(f"Для ресторана {restaurant_id} имя не указано, используем значение по умолчанию")
                 
@@ -176,12 +161,10 @@ class RestaurantsLoader:
         
         self.log.info(f"Преобразовано {len(transformed_data)} записей")
         return transformed_data
-
+    # Загрузка данных в DDS слой для таблицы dm_restaurants
     def load_to_dds(self, cursor, transformed_data: List[Dict]) -> None:
         """
-        Загрузка данных в DDS слой для таблицы dm_restaurants
-        
-        Используем подход SCD Type 2 для хранения истории изменений.
+        Используем подход SCD 2 для хранения истории изменений.
         При поступлении новой версии ресторана:
         1. Закрываем предыдущую версию (устанавливаем active_to)
         2. Вставляем новую версию с новым active_from
@@ -234,12 +217,9 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при загрузке данных в DDS: {e}")
             raise
-
+            
+    # Основной метод выполнения загрузки с отслеживанием прогресса. Возвращает количество обработанных записей
     def run_copy(self, cursor) -> int:
-        """
-        Основной метод выполнения загрузки с отслеживанием прогресса
-        Возвращает количество обработанных записей
-        """
         self.log.info("=" * 60)
         self.log.info("Начало загрузки данных ресторанов из STG в DDS")
         self.log.info("=" * 60)
@@ -284,11 +264,10 @@ class RestaurantsLoader:
         except Exception as e:
             self.log.error(f"Ошибка при выполнении загрузки: {e}")
             raise
-
+            
+    # Основной метод загрузки данных с использованием контекстного менеджера
     def execute_loading(self) -> None:
-        """
-        Основной метод загрузки данных с использованием контекстного менеджера
-        """
+        
         try:
             self.log.info("Начало загрузки ресторанов в DDS")
             
